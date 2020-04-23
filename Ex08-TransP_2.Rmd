@@ -1,0 +1,96 @@
+---
+title: "Ex-08 - Transshipment Problem Problema no Balanceado"
+author: "Maximiliano Correa Pietrobon"
+output: html_document
+---
+# Definicion del Problema
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reticulate)
+```
+
+```{python ImportPyLibraries}
+import numpy as np
+from scipy.optimize import linprog
+```
+## Defino Funcion Matriz NodoNodo a NodoArco
+```{python Fc_NN2NA}
+def nn2na (NN):
+  #get every location where exist an arc:
+  idxs = np.argwhere(NN)
+  #idxs <-retorna un vector c con las posiciones ij con todos los arcos [(i1,j1),(i2,j2),etc]
+  #Preallocate NA matrix, dimension is (nodes, arcs)
+  NA = np.zeros([NN.shape[0],idxs.shape[0]]).astype(int)
+  # Dimension de NA : Filas = dim NN (cantidad de nodos), COL= dim idxs (cantidad de arcos)
+  
+  #loop in every arc, complete from (1) to (-1)
+  for i, arc in enumerate (idxs):
+    NA[arc[0],i] = 1 #from
+    NA[arc[1],i] = -1 #to
+    
+  #arc_idxs = [(arc[0], arc[1])] for arc in idxs]
+  
+  return NA
+```
+
+## Detallo el Modelo en terminos de Inv Operativa
+```{python}
+C = np.array([100,100,200,200,150,150,150,150,200,200,200,200,100,150,200,100,150,200,100,150,200,100,150,200])
+print(C)
+
+GNN = np.array ([[0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0], #P1A
+                [0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0], #S1A
+                [0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1],
+                [0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0],
+                [0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], #V1A
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]])
+
+GNA = nn2na(GNN)
+print(GNA)
+
+Aub = Aeq = GNA
+
+for i in range(0,5): Aeq[i,:]=0
+for i in range(6,15): Aub[i,:]=0
+
+
+print(Aeq)
+print("PUT#")
+print(Aub)
+
+beq = np.array([[0,0,0,0,0,0,0,0,0,0,-30,-40,-10,-20,-20,-20]])
+print(beq)
+
+bub = np.array([[20,30,10,40,30,10,0,0,0,0,0,0,0,0,0,0]])
+print(bub)
+
+bounds = tuple ([(0,None) for i in range (0, Aeq.shape[1])])
+print(Aeq.shape[0])
+print(Aeq.shape[1])
+print(bounds)
+```
+
+```{python}
+SP = linprog(C,A_eq=Aeq, b_eq=beq,A_ub=Aub,b_ub=bub,bounds=bounds,method='simplex')
+print(SP)
+```
+
+## Resuelvo Modelo Utilizando "simplex"
+```{python Run-Optimizador, warning=FALSE}
+print('Situacion Camino mas corto y tiempo menor a %s' % bub) 
+print('Vector de Soluciones: %s' % SP.x) 
+print('Valor optimo: %s'% SP.fun)
+print('Holgura de Tiempo Diponible: %s' % SP.slack)
+print('##########')
+
+```
